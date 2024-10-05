@@ -1,0 +1,16 @@
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\obj\Debug\DoAn_Tetris.csproj.AssemblyReference.cache
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\obj\Debug\DoAn_Tetris.csproj.SuggestedBindingRedirects.cache
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\obj\Debug\DoAn_Tetris.exe.config
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\obj\Debug\DoAn_Tetris.csproj.CoreCompileInputs.cache
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\bin\Debug\DoAn_Tetris.exe.config
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\bin\Debug\DoAn_Tetris.exe
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\bin\Debug\DoAn_Tetris.pdb
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\bin\Debug\System.Reflection.Metadata.dll
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\bin\Debug\System.Memory.dll
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\bin\Debug\System.Collections.Immutable.dll
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\bin\Debug\System.Runtime.CompilerServices.Unsafe.dll
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\bin\Debug\System.Numerics.Vectors.dll
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\bin\Debug\System.Buffers.dll
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\obj\Debug\DoAn_Tet.A92AF54E.Up2Date
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\obj\Debug\DoAn_Tetris.exe
+E:\CSharp_Repo\DoAn_Tetris\DoAn_Tetris\obj\Debug\DoAn_Tetris.pdb
