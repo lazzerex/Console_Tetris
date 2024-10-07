@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Diagnostics;
 using System.IO;
@@ -9,6 +9,209 @@ namespace Tetris
 {
     class Program1
     {
+
+        enum GameMode
+        {
+            Classic,
+            Puzzle
+        }
+
+        enum PuzzleDifficulty
+        {
+            Easy,
+            Medium,
+            Hard
+        }
+
+
+        static GameMode gameMode = GameMode.Classic;
+        static PuzzleDifficulty puzzleDifficulty;
+        static int movesRemaining;
+        static int targetLines;
+
+        static void ResetGameState()
+        {
+            // Reset game variables
+            score = 0;
+            removedLines = 0;
+            level = 1;
+            levelremovelines = 0;
+            bagIndex = 0;
+            holdIndex = -1;
+            holdChar = ' ';
+            amount = 0;
+            maxTime = 22;
+            currentRot = 0;
+            currentX = 4;
+            currentY = 0;
+
+            // Clear the game board and reset colors
+            for (int y = 0; y < mapSizeY; y++)
+            {
+                for (int x = 0; x < mapSizeX; x++)
+                {
+                    bg[y, x] = '-';
+                    blockColoursOnScreen[y, x] = ConsoleColor.DarkGray;
+                }
+            }
+
+            // Clear shadow colors
+            for (int y = 0; y < mapSizeY; y++)
+            {
+                for (int x = 0; x < mapSizeX; x++)
+                {
+                    shadowColorsOnScreen[y, x] = ConsoleColor.DarkGray;
+                }
+            }
+
+            // Clear hold area colors
+            holdColour = ConsoleColor.DarkGray;
+
+            // Clear next block colors
+            for (int y = 0; y < mapSizeY; y++)
+            {
+                for (int x = 0; x < upNextSize; x++)
+                {
+                    nextBlockColours[y, x] = ConsoleColor.DarkGray;
+                }
+            }
+
+            // Generate new bags
+            bag = GenerateBag();
+            nextBag = GenerateBag();
+
+            // Restart stopwatch
+            stopwatch.Restart();
+        }
+
+
+        static void SelectPuzzleDifficulty()
+        {
+            Console.Clear();
+            DrawBorder();
+
+            string[] difficultyMenu = new string[]
+            {
+                "+----------------------+",
+                "|   Select Difficulty  |",
+                "| 1. Easy             |",
+                "| 2. Medium           |",
+                "| 3. Hard             |",
+                "| Esc to Return       |",
+                "+----------------------+"
+            };
+
+            int startY = Console.WindowHeight / 2 - difficultyMenu.Length / 2;
+            foreach (string line in difficultyMenu)
+            {
+                int startX = Console.WindowWidth / 2 - line.Length / 2;
+                Console.SetCursorPosition(startX, startY++);
+                Console.WriteLine(line);
+            }
+
+            while (true)
+            {
+                ConsoleKeyInfo key = Console.ReadKey(true);
+                switch (key.Key)
+                {
+                    case ConsoleKey.D1:
+                        SetupPuzzleMode(PuzzleDifficulty.Easy);
+                        return;
+                    case ConsoleKey.D2:
+                        SetupPuzzleMode(PuzzleDifficulty.Medium);
+                        return;
+                    case ConsoleKey.D3:
+                        SetupPuzzleMode(PuzzleDifficulty.Hard);
+                        return;
+                    case ConsoleKey.Escape:
+                        TitleScreen();
+                        return;
+                }
+            }
+        }
+
+        // Add method to setup puzzle mode
+        static void SetupPuzzleMode(PuzzleDifficulty difficulty)
+        {
+            ResetGameState();
+            Console.Clear();
+            gameMode = GameMode.Puzzle;
+            puzzleDifficulty = difficulty;
+
+            switch (difficulty)
+            {
+                case PuzzleDifficulty.Easy:
+                    movesRemaining = 20;
+                    targetLines = 3;
+                    break;
+                case PuzzleDifficulty.Medium:
+                    movesRemaining = 15;
+                    targetLines = 4;
+                    break;
+                case PuzzleDifficulty.Hard:
+                    movesRemaining = 10;
+                    targetLines = 5;
+                    break;
+            }
+
+            DrawBorderingame();
+            NewBlock();
+        }
+
+        static void PuzzleGameOver(bool won)
+        {
+            Console.Clear();
+            DrawBorder();
+
+            int windowWidth = 40;
+            int windowHeight = 20;
+            int centerX = windowWidth / 2 - 9;
+            int centerY = windowHeight / 2 - 3;
+
+            string resultMessage = won ? "PUZZLE COMPLETE!" : "PUZZLE FAILED";
+            ConsoleColor messageColor = won ? ConsoleColor.Green : ConsoleColor.Red;
+
+            // Draw game over box
+            Console.SetCursorPosition(centerX, centerY);
+            Console.WriteLine("+--------------------+");
+            Console.SetCursorPosition(centerX, centerY + 1);
+            Console.ForegroundColor = messageColor;
+            Console.WriteLine($"|    {resultMessage}    |");
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.SetCursorPosition(centerX, centerY + 2);
+            Console.WriteLine("+--------------------+");
+            Console.SetCursorPosition(centerX, centerY + 3);
+            Console.WriteLine($"| Lines: {removedLines}/{targetLines}      |");
+            Console.SetCursorPosition(centerX, centerY + 4);
+            Console.WriteLine($"| Moves Used: {20 - movesRemaining}      |");
+            Console.SetCursorPosition(centerX, centerY + 5);
+            Console.WriteLine("+--------------------+");
+            Console.SetCursorPosition(centerX, centerY + 6);
+            Console.WriteLine("| Play again? (Y/N)  |");
+            Console.SetCursorPosition(centerX, centerY + 7);
+            Console.WriteLine("+--------------------+");
+
+            bool validInput = false;
+            while (!validInput)
+            {
+                ConsoleKeyInfo key = Console.ReadKey(true);
+                switch (char.ToUpper(key.KeyChar))
+                {
+                    case 'Y':
+                        validInput = true;
+                        SelectPuzzleDifficulty(); // Return to difficulty selection
+                        break;
+                    case 'N':
+                        validInput = true;
+                        TitleScreen(); // Return to title screen
+                        break;
+                }
+            }
+        }
+
+
+
+
         static int GetShadowY()
         {
             int shadowY = currentY;
@@ -19,121 +222,142 @@ namespace Tetris
             return shadowY;
         }
 
-        static void TitleScreen()
+        static void TransitionScreen()
         {
             Console.Clear();
-            Console.OutputEncoding = System.Text.Encoding.UTF8; // Ensure encoding supports special characters
+            DrawBorder();
 
-            // Larger, more detailed ASCII art for TETRIS with some depth and shadowing effect
+            int windowWidth = 40;
+            int windowHeight = 22;
+            int centerX = windowWidth / 2 - 10; // Center alignment for 20 character width loading bar
+            int centerY = windowHeight / 2 - 3;
+
+            int barWidth = 20; // Width of the loading bar
+            string emptyBar = new string(' ', barWidth); // Empty spaces in the bar
+            string fullBar = new string('#', barWidth);  // Full bar representation
+
+            // Loading animation with progress bar
+            for (int i = 0; i <= barWidth; i++)
+            {
+                string currentBar = new string('#', i) + new string(' ', barWidth - i); // Dynamic bar filling
+                Console.CursorVisible = false;
+                // Display the loading bar frame
+                Console.SetCursorPosition(centerX, centerY);
+                Console.WriteLine("+----------------------+");
+                Console.SetCursorPosition(centerX, centerY + 1);
+                Console.WriteLine("|      LOADING...      |");
+                Console.SetCursorPosition(centerX, centerY + 2);
+                Console.WriteLine($"|[{currentBar}]| "); // Display the progress bar
+                Console.SetCursorPosition(centerX, centerY + 3);
+                Console.WriteLine("|                      |");
+                Console.SetCursorPosition(centerX, centerY + 4);
+                Console.WriteLine("+----------------------+");
+
+                Thread.Sleep(100); // Simulate loading time
+            }
+
+            // Final countdown
+            for (int i = 3; i > 0; i--)
+            {
+                Console.SetCursorPosition(centerX, centerY);
+                Console.WriteLine("+----------------------+");
+                Console.SetCursorPosition(centerX, centerY + 1);
+                Console.WriteLine($"|    Starting in {i}...  |");
+                Console.SetCursorPosition(centerX, centerY + 2);
+                Console.WriteLine("|                      |");
+                Console.SetCursorPosition(centerX, centerY + 3);
+                Console.WriteLine("|     GET  READY!      |");
+                Console.SetCursorPosition(centerX, centerY + 4);
+                Console.WriteLine("+----------------------+");
+
+                Thread.Sleep(1000); // 1-second countdown
+            }
+
+            Console.Clear();
+        }
+
+        static void TitleScreen()
+        {
+            Console.WindowHeight = 22;
+            Console.Clear();
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+            DrawBorder();
 
             string[] tetrisArt = new string[]
             {
-       "  TTTTTTT  EEEEEEE  TTTTTTT  RRRRR    IIIIII  SSSSSS ",
-       "    TT     EE         TT     R    R     II    SS      ",
-       "    TT     EEEEE      TT     RRRRR      II    SSSSSS  ",
-       "    TT     EE         TT     R  RR      II        SS  ",
-       "    TT     EEEEEEE    TT     R    RR  IIIIII  SSSSSS "
+                "TTTTTT EEEEEE TTTTTT  RRRRR   IIII  SSSSS",
+                "  TT   EE       TT    R    R   II   SS    ",
+                "  TT   EEEE     TT    RRRRR    II   SSSSS",
+                "  TT   EE       TT    R  RR    II      SS",
+                "  TT   EEEEEE   TT    R    RR IIII  SSSSS"
             };
 
-            // Render frame around the title screen with new dimensions 45x25
-            string[] frame = new string[]
+            int windowWidth = 40;
+            int windowHeight = 20;
+            int artStartY = 4;
+
+            // Display the TETRIS art
+            for (int i = 0; i < tetrisArt.Length; i++)
             {
-        "+---------------------------------------------+",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "|                                             |",
-        "+---------------------------------------------+"
-            };
+                int artWidth = tetrisArt[i].Length;
+                int startX = Math.Max(1, (windowWidth - artWidth) / 2);
+                Console.SetCursorPosition(startX, artStartY + i);
 
-            int frameWidth = 45;   // Frame width
-            int frameHeight = 25;  // Frame height
-            int windowWidth = 80;  // Console window width
-            int windowHeight = 30; // Console window height
-
-            int frameX = windowWidth / 2 - frameWidth / 2;  // Center the frame horizontally
-            int frameY = windowHeight / 2 - frameHeight / 2;  // Center the frame vertically
-
-            // Draw the frame
-            foreach (string line in frame)
-            {
-                Console.SetCursorPosition(frameX, frameY++);
-                foreach (char c in line)
+                foreach (char c in tetrisArt[i])
                 {
                     Console.Write(c);
-                    Thread.Sleep(5);  // Fast typing effect for the frame
+                    Thread.Sleep(5);
                 }
-                Console.WriteLine();
             }
 
-            // Render ASCII art with a typing effect inside the frame
-            int artWidth = tetrisArt[0].Length;  // Width of the Tetris ASCII art
-            int artHeight = tetrisArt.Length;    // Height of the Tetris ASCII art
-
-            int artCenterX = frameX + (frameWidth - artWidth) / 2;  // Horizontally center the ASCII art within the frame
-            int artCenterY = frameY - frameHeight + (frameHeight - artHeight) / 2;  // Vertically center within the frame
-
-            foreach (string line in tetrisArt)
-            {
-                Console.SetCursorPosition(artCenterX, artCenterY++);
-                foreach (char c in line)
-                {
-                    Console.Write(c);
-                    Thread.Sleep(30);  // Slower typing effect for the title
-                }
-                Console.WriteLine();
-            }
-
-            // Game Menu options with a slight delay for each letter
             string[] menuLines = new string[]
             {
-                    "    |        +----------------------------+       |         ",
-                    "    |        |  Press Enter to Play       |       |         ",
-                    "    |        |  Press Esc to Exit         |       |         ",
-                    "    |        +----------------------------+       |         "
+                "+----------------------+",
+                "| 1. Classic Mode     |",
+                "| 2. Puzzle Mode      |",
+                "| Esc to Exit         |",
+                "+----------------------+"
             };
 
-            int menuCenterY = artCenterY + 2; // Adjust Y position after ASCII art
+            int menuStartY = artStartY + tetrisArt.Length + 2;
 
-
-            foreach (var line in menuLines)
+            foreach (string line in menuLines)
             {
-                Console.SetCursorPosition(artCenterX, menuCenterY++);
+                int menuX = Math.Max(1, (windowWidth - line.Length) / 2);
+                Console.SetCursorPosition(menuX, menuStartY++);
                 foreach (char c in line)
                 {
                     Console.Write(c);
-                    Thread.Sleep(20);  // Slightly faster for menu options
+                    Thread.Sleep(10);
                 }
-                Console.WriteLine();
             }
 
-            // Wait for user input
             while (true)
             {
                 ConsoleKeyInfo key = Console.ReadKey(true);
-                if (key.Key == ConsoleKey.Enter)
+                if (key.Key == ConsoleKey.D1)
                 {
-                    // Clear the screen and start the game
+                    ResetGameState();
+                    gameMode = GameMode.Classic;
                     Console.Clear();
+                    DrawBorderingame();
+                    NewBlock();
+                    break;
+                }
+                else if (key.Key == ConsoleKey.D2)
+                {
+                    ResetGameState();
+                    SelectPuzzleDifficulty();
                     break;
                 }
                 else if (key.Key == ConsoleKey.Escape)
                 {
-                    // Exit the game
                     Environment.Exit(0);
                 }
             }
         }
+
 
 
 
@@ -259,12 +483,11 @@ namespace Tetris
         {
 
             TitleScreen();
+            TransitionScreen(); // Add this line after TitleScreen
             LoadHighScore();
             Console.WindowHeight = 22;
-            // Make the console cursor invisible
             Console.CursorVisible = false;
             blockColours = new ConsoleColor[7];
-            // Title
             Console.Title = "doannhom8";
             DrawBorderingame();
             // Start the inputthread to get live inputs
@@ -412,30 +635,60 @@ namespace Tetris
         }
         static void BlockDownCollision()
         {
-
             // Add blocks from current to background
             for (int i = 0; i < positions.GetLength(2); i++)
             {
-                bg[positions[currentIndex, currentRot, i, 1] + currentY, positions[currentIndex, currentRot, i, 0] + currentX] = '#';
-                blockColoursOnScreen[positions[currentIndex, currentRot, i, 1] + currentY, positions[currentIndex, currentRot, i, 0] + currentX] = blockColours[currentIndex]; // Cập nhật màu sắc của các khối
+                int x = positions[currentIndex, currentRot, i, 0] + currentX;
+                int y = positions[currentIndex, currentRot, i, 1] + currentY;
+                if (y >= 0 && y < mapSizeY && x >= 0 && x < mapSizeX)
+                {
+                    bg[y, x] = '#';
+                    blockColoursOnScreen[y, x] = blockColours[currentIndex];
+                }
             }
 
-            // Loop 
+            if (gameMode == GameMode.Puzzle)
+            {
+                movesRemaining--;
+            }
+
+            // Check for lines
+            bool linesCleared = false;
+            int linesThisMove = 0;
             while (true)
             {
-                // Check for line
                 int lineY = Line(bg);
-
-                // If a line is detected
                 if (lineY != -1)
                 {
                     ClearLine(lineY);
-
+                    linesCleared = true;
+                    linesThisMove++;
                     continue;
                 }
                 break;
             }
-            // New block
+
+            // Check win/lose conditions for puzzle mode
+            if (gameMode == GameMode.Puzzle)
+            {
+                // Update removedLines count
+                if (linesThisMove > 0)
+                {
+                    removedLines += linesThisMove;
+                }
+
+                if (removedLines >= targetLines)
+                {
+                    PuzzleGameOver(true);
+                    return;
+                }
+                else if (movesRemaining <= 0)
+                {
+                    PuzzleGameOver(false);
+                    return;
+                }
+            }
+
             NewBlock();
         }
         static ConsoleColor[,] blockColoursOnScreen = new ConsoleColor[mapSizeY, mapSizeX];
@@ -487,39 +740,10 @@ namespace Tetris
 
         static void Restart()
         {
-            // Reset lại các biến trạng thái của trò chơi
-            score = 0;
-            removedLines = 0;
-            level = 1;
-            levelremovelines = 0;
-            bagIndex = 0;
-            holdIndex = -1;
-            holdChar = ' ';
-            amount = 0;
-            maxTime = 22;
-
-            // Làm mới lại bản đồ nền (bg)
-            for (int y = 0; y < mapSizeY; y++)
-            {
-                for (int x = 0; x < mapSizeX; x++)
-                {
-                    bg[y, x] = '-';
-                }
-            }
-
-            // Tạo túi khối mới
-            bag = GenerateBag();
-            nextBag = GenerateBag();
-
-            // Tạo khối mới
-            NewBlock();
-
-            // Đặt lại đồng hồ
-            stopwatch.Restart();
-
-            // In ra thông tin về trạng thái mới của trò chơi
+            ResetGameState();
             Console.Clear();
             DrawBorderingame();
+            NewBlock();
         }
 
 
@@ -664,13 +888,14 @@ namespace Tetris
         static void Print(char[,] view, char[,] hold, char[,] next)
         {
             Level();
+            Console.ForegroundColor = ConsoleColor.Gray; // Reset color for border
+
             for (int y = 0; y < mapSizeY; y++)
             {
                 Console.SetCursorPosition(1, y + 1);
                 for (int x = 0; x < holdSizeX + mapSizeX + upNextSize; x++)
                 {
                     char i = ' ';
-                    // Add hold + Main View + up next to view
                     if (x < holdSizeX) i = hold[y, x];
                     else if (x >= holdSizeX + mapSizeX) i = next[y, x - mapSizeX - upNextSize];
                     else i = view[y, (x - holdSizeX)];
@@ -683,7 +908,7 @@ namespace Tetris
                         {
                             Console.ForegroundColor = blockColoursOnScreen[y, gameX];
                         }
-                        else if (i == '░')  // Shadow character
+                        else if (i == '░')
                         {
                             Console.ForegroundColor = shadowColorsOnScreen[y, gameX];
                         }
@@ -711,38 +936,43 @@ namespace Tetris
                     Console.Write(i);
                 }
 
-                // Rest of the status information printing remains the same
-                if (y == 1) Console.Write($"| High Score: {highScore}  ");
-                if (y == 3) Console.Write($"| Score: {score}  ");
-                if (y == 5) Console.Write($"| Lines: {removedLines} ");
-                if (y == 7) Console.Write($"| Time: {stopwatch.Elapsed.Minutes}:{stopwatch.Elapsed.Seconds:D2} ");
-                if (y == 9) Console.Write($"| Level: {level} ");
+                Console.ForegroundColor = ConsoleColor.Gray; // Reset color for status text
+                if (gameMode == GameMode.Classic)
+                {
+                    if (y == 1) Console.Write($"| High Score: {highScore}  ");
+                    if (y == 3) Console.Write($"| Score: {score}  ");
+                    if (y == 5) Console.Write($"| Lines: {removedLines} ");
+                    if (y == 7) Console.Write($"| Time: {stopwatch.Elapsed.Minutes}:{stopwatch.Elapsed.Seconds:D2} ");
+                    if (y == 9) Console.Write($"| Level: {level} ");
+                }
+                else // Puzzle Mode
+                {
+                    if (y == 1) Console.Write($"| Difficulty: {puzzleDifficulty}");
+                    if (y == 3) Console.Write($"| Moves Left: {movesRemaining}    ");
+                    if (y == 5) Console.Write($"| Lines: {removedLines}/{targetLines}     ");
+                    if (y == 7) Console.Write($"| Time: {stopwatch.Elapsed.Minutes}:{stopwatch.Elapsed.Seconds:D2} ");
+                }
                 Console.WriteLine();
             }
-
-            // Reset cursor position
-            Console.SetCursorPosition(0, Console.CursorTop - mapSizeY);
         }
 
-        // Reset console cursor position
-
         static int[] GenerateBag()
-        {
+            {
             // Not my code, source https://stackoverflow.com/questions/108819/best-way-to-randomize-an-array-with-net
             Random random = new Random();
             int n = 7;
             int[] ret = { 0, 1, 2, 3, 4, 5, 6 };
             while (n > 1)
-            {
-                int k = random.Next(n--);
-                int temp = ret[n];
-                ret[n] = ret[k];
-                ret[k] = temp;
+                {
+                    int k = random.Next(n--);
+                    int temp = ret[n];
+                    ret[n] = ret[k];
+                    ret[k] = temp;
 
-            }
+                }
             return ret;
 
-        }
+            }
         static bool Collision(int index, char[,] bg, int x, int y, int rot)
         {
 
